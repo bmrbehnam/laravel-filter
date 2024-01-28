@@ -2,18 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Models\Order;
 use Illuminate\Database\Seeder;
 
-class DatabaseSeeder extends Seeder
+class OrderSeeder extends Seeder
 {
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        $this->call([
-            UserSeeder::class,
-            OrderSeeder::class
-        ]);
+        Order::factory(20)->create();
     }
 }
