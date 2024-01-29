@@ -3,7 +3,6 @@
 namespace Tests\Feature\Controllers\Api\V1;
 
 use App\Enums\OrderStatus;
-use App\Exceptions\FilterException;
 use App\Models\Order;
 use App\Models\User;
 use App\Notifications\FilterExceptionNotification;

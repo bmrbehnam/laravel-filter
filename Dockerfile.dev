@@ -41,6 +41,13 @@ RUN chgrp -R 0 /tmp/app && \
     cp -a /tmp/app/. /var/www/html && \
     rm -rf /tmp/app
 
+
+# Use deluser and adduser to modify UID and GID
+RUN deluser www-data \
+    && adduser -D -u 1000 -g 1000 www-data
+# Switch to the www-data user
+USER www-data
+
 RUN pear config-set php_bin /usr/local/bin/php
 
 WORKDIR /var/www/html
