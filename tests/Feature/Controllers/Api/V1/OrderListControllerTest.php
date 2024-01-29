@@ -3,9 +3,12 @@
 namespace Tests\Feature\Controllers\Api\V1;
 
 use App\Enums\OrderStatus;
+use App\Exceptions\FilterException;
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\FilterExceptionNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 use Tests\TestCase;
 
@@ -32,15 +35,25 @@ class OrderListControllerTest extends TestCase
                 'amount' => $order->amount
             ];
         }
-        $response->assertExactJson([
-            'data' => $data,
-            'pagination' => [
-                'current_page' => 1,
-                'per_page' => 10,
-                'total' => count($orders),
-            ],
-        ]);
+        $response->assertExactJson(
+            ['data' => $data] + $this->paginationResponse(count($orders), 10, 1)
+        );
     }
+
+    public function test_can_report_filter_exception_in_orders_list(): void
+    {
+        $user = User::factory()->create();
+        Order::factory()->userId($user->id)->count(5)->create();
+        Notification::fake();
+
+        // without authentication for this task
+        $response = $this->getJson(route('api.v1.orders.index', ['min_amount' => 'invalid data string']));
+
+        $response->assertStatus(ResponseAlias::HTTP_INTERNAL_SERVER_ERROR);
+        Notification::assertCount(1);
+        Notification::assertSentOnDemand(FilterExceptionNotification::class);
+    }
+
 
     public function test_user_can_get_orders_list_with_status_filter(): void
     {
@@ -55,21 +68,17 @@ class OrderListControllerTest extends TestCase
 
         $response->assertStatus(ResponseAlias::HTTP_OK);
         $response->assertExactJson([
-            'data' => [
-                [
-                    'id' => $order->id,
-                    'user_id' => $order->user_id,
-                    'name' => $user->name,
-                    'status' => $order->status,
-                    'amount' => $order->amount
+                'data' => [
+                    [
+                        'id' => $order->id,
+                        'user_id' => $order->user_id,
+                        'name' => $user->name,
+                        'status' => $order->status,
+                        'amount' => $order->amount
+                    ]
                 ]
-            ],
-            'pagination' => [
-                'current_page' => 1,
-                'per_page' => 10,
-                'total' => 1,
-            ],
-        ]);
+            ] + $this->paginationResponse(1, 10, 1)
+        );
     }
 
     public function test_user_can_get_orders_list_with_amount_filters(): void
@@ -85,28 +94,24 @@ class OrderListControllerTest extends TestCase
 
         $response->assertStatus(ResponseAlias::HTTP_OK);
         $response->assertExactJson([
-            'data' => [
-                [
-                    'id' => $order1->id,
-                    'user_id' => $order1->user_id,
-                    'name' => $user->name,
-                    'status' => $order1->status,
-                    'amount' => $order1->amount
+                'data' => [
+                    [
+                        'id' => $order1->id,
+                        'user_id' => $order1->user_id,
+                        'name' => $user->name,
+                        'status' => $order1->status,
+                        'amount' => $order1->amount
+                    ],
+                    [
+                        'id' => $order2->id,
+                        'user_id' => $order2->user_id,
+                        'name' => $user->name,
+                        'status' => $order2->status,
+                        'amount' => $order2->amount
+                    ]
                 ],
-                [
-                    'id' => $order2->id,
-                    'user_id' => $order2->user_id,
-                    'name' => $user->name,
-                    'status' => $order2->status,
-                    'amount' => $order2->amount
-                ]
-            ],
-            'pagination' => [
-                'current_page' => 1,
-                'per_page' => 10,
-                'total' => 2,
-            ],
-        ]);
+            ] + $this->paginationResponse(2, 10, 1)
+        );
     }
 
     public function test_user_can_get_orders_list_with_nation_code_filter(): void
@@ -122,21 +127,17 @@ class OrderListControllerTest extends TestCase
 
         $response->assertStatus(ResponseAlias::HTTP_OK);
         $response->assertExactJson([
-            'data' => [
-                [
-                    'id' => $order->id,
-                    'user_id' => $order->user_id,
-                    'name' => $user->name,
-                    'status' => $order->status,
-                    'amount' => $order->amount
+                'data' => [
+                    [
+                        'id' => $order->id,
+                        'user_id' => $order->user_id,
+                        'name' => $user->name,
+                        'status' => $order->status,
+                        'amount' => $order->amount
+                    ]
                 ]
-            ],
-            'pagination' => [
-                'current_page' => 1,
-                'per_page' => 10,
-                'total' => 1,
-            ],
-        ]);
+            ] + $this->paginationResponse(1, 10, 1)
+        );
     }
 
     public function test_user_can_get_orders_list_with_user_filter(): void
@@ -153,21 +154,17 @@ class OrderListControllerTest extends TestCase
 
         $response->assertStatus(ResponseAlias::HTTP_OK);
         $response->assertExactJson([
-            'data' => [
-                [
-                    'id' => $order->id,
-                    'user_id' => $order->user_id,
-                    'name' => $user2->name,
-                    'status' => $order->status,
-                    'amount' => $order->amount
+                'data' => [
+                    [
+                        'id' => $order->id,
+                        'user_id' => $order->user_id,
+                        'name' => $user2->name,
+                        'status' => $order->status,
+                        'amount' => $order->amount
+                    ]
                 ]
-            ],
-            'pagination' => [
-                'current_page' => 1,
-                'per_page' => 10,
-                'total' => 1,
-            ],
-        ]);
+            ] + $this->paginationResponse(1, 10, 1)
+        );
     }
 
     public function test_user_can_get_orders_list_with_customer_name_filter(): void
@@ -184,20 +181,27 @@ class OrderListControllerTest extends TestCase
 
         $response->assertStatus(ResponseAlias::HTTP_OK);
         $response->assertExactJson([
-            'data' => [
-                [
-                    'id' => $order->id,
-                    'user_id' => $order->user_id,
-                    'name' => $user2->name,
-                    'status' => $order->status,
-                    'amount' => $order->amount
+                'data' => [
+                    [
+                        'id' => $order->id,
+                        'user_id' => $order->user_id,
+                        'name' => $user2->name,
+                        'status' => $order->status,
+                        'amount' => $order->amount
+                    ]
                 ]
-            ],
+            ] + $this->paginationResponse(1, 10, 1)
+        );
+    }
+
+    private function paginationResponse($total, $perPage, $currentPage): array
+    {
+        return [
             'pagination' => [
-                'current_page' => 1,
-                'per_page' => 10,
-                'total' => 1,
+                'current_page' => $currentPage,
+                'per_page' => $perPage,
+                'total' => $total,
             ],
-        ]);
+        ];
     }
 }

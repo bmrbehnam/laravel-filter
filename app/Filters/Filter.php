@@ -2,9 +2,11 @@
 
 namespace App\Filters;
 
+use App\Exceptions\FilterException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Throwable;
 
 abstract class Filter
 {
@@ -51,15 +53,20 @@ abstract class Filter
      *
      * @param Builder $builder
      * @return Builder
+     * @throws FilterException
      */
     public function apply(Builder $builder): Builder
     {
-        $this->builder = $builder;
+        try {
+            $this->builder = $builder;
 
-        $this->applyFilters();
-        $this->applyCustomFilters();
+            $this->applyFilters();
+            $this->applyCustomFilters();
 
-        return $this->builder;
+            return $this->builder;
+        } catch (Throwable $exception) {
+            throw new FilterException($exception);
+        }
     }
 
     /**
@@ -132,7 +139,6 @@ abstract class Filter
      */
     private function addCondition(string $field, string $operator, mixed $value): void
     {
-//        echo ("$field, $operator, $value");
         $this->builder->where($field, $operator, $value);
     }
 }

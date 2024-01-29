@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\order\OrderResource;
 use App\Models\Order;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderListController extends Controller
 {
